@@ -1,0 +1,17 @@
+venv/
+.venv/
+env/
+
+.env
+
+__pycache__/
+*.pyc
+
+resume_db/
+backend/resume_db/
+
+flashrank_cache/
+backend/flashrank_cache/
+
+node_modules/
+dist/
