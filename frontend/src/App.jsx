@@ -1,117 +1,187 @@
-import React, { useState, useCallback } from 'react';
-import { Box, AppBar, Toolbar, Typography, Drawer, List, ListItem, ListItemButton, ListItemText, CssBaseline, Chip, Divider } from '@mui/material';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
-import WorkIcon from '@mui/icons-material/Work';
-import LeaderboardIcon from '@mui/icons-material/Leaderboard';
-import ChatIcon from '@mui/icons-material/Chat';
-import ResumeUpload from './components/ResumeUpload';
-import JDUpload from './components/JDUpload';
-import RankingTable from './components/RankingTable';
-import RecruiterChat from './components/RecruiterChat';
-import Dashboard from './components/Dashboard';
-import { getHealth } from './utils/api';
+import React, { useState, useEffect } from "react";
 
-const DRAWER_WIDTH = 230;
+import Dashboard from "./pages/Dashboard";
+import ResumeUpload from "./pages/ResumeUpload";
+import JDUpload from "./pages/JDUpload";
+import RankingTable from "./pages/RankingTable";
+import RecruiterChat from "./pages/RecruiterChat";
+
+import Navbar from "./components/Navbar";
+import Sidebar from "./components/Sidebar";
+
+import {
+  Box,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
+
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+import WorkIcon from "@mui/icons-material/Work";
+import LeaderboardIcon from "@mui/icons-material/Leaderboard";
+import ChatIcon from "@mui/icons-material/Chat";
+
+import { getHealth } from "./utils/api";
 
 const navItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon fontSize="small" /> },
-  { id: 'resume', label: 'Upload Resume', icon: <UploadFileIcon fontSize="small" /> },
-  { id: 'jd', label: 'Job Description', icon: <WorkIcon fontSize="small" /> },
-  { id: 'rankings', label: 'Rankings', icon: <LeaderboardIcon fontSize="small" /> },
-  { id: 'chat', label: 'Recruiter Chat', icon: <ChatIcon fontSize="small" /> },
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    icon: <DashboardIcon />,
+  },
+  {
+    id: "resume",
+    label: "Upload Resume",
+    icon: <UploadFileIcon />,
+  },
+  {
+    id: "jd",
+    label: "Job Description",
+    icon: <WorkIcon />,
+  },
+  {
+    id: "ranking",
+    label: "Rankings",
+    icon: <LeaderboardIcon />,
+  },
+  {
+    id: "chat",
+    label: "Recruiter Chat",
+    icon: <ChatIcon />,
+  },
 ];
 
 export default function App() {
-  const [activePage, setActivePage] = useState('dashboard');
+  const [selectedPage, setSelectedPage] = useState("dashboard");
   const [rankedCandidates, setRankedCandidates] = useState([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [backendStatus, setBackendStatus] = useState('checking');
+  const [backendStatus, setBackendStatus] = useState("checking");
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  React.useEffect(() => {
-    const checkBackend = async () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  useEffect(() => {
+    const check = async () => {
       try {
         await getHealth();
-        setBackendStatus('connected');
+        setBackendStatus("connected");
       } catch {
-        setBackendStatus('disconnected');
+        setBackendStatus("disconnected");
       }
     };
-    checkBackend();
-    const interval = setInterval(checkBackend, 30000);
+
+    check();
+
+    const interval = setInterval(check, 30000);
+
     return () => clearInterval(interval);
   }, []);
 
-  const handleCandidateAdded = useCallback(() => {
-    setRefreshTrigger(prev => prev + 1);
-  }, []);
+  const handleCandidateAdded = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
 
-  const handleRanked = useCallback((candidates) => {
+  const handleRanked = (candidates) => {
     setRankedCandidates(candidates);
-    setActivePage('rankings');
-  }, []);
+    setSelectedPage("ranking");
+  };
+
+  const handleNavClick = (id) => {
+    setSelectedPage(id);
+    setMobileOpen(false);
+  };
 
   const renderPage = () => {
-    switch (activePage) {
-      case 'dashboard': return <Dashboard refreshTrigger={refreshTrigger} />;
-      case 'resume': return <ResumeUpload onCandidateAdded={handleCandidateAdded} />;
-      case 'jd': return <JDUpload onRanked={handleRanked} />;
-      case 'rankings': return <RankingTable rankedCandidates={rankedCandidates} refreshTrigger={refreshTrigger} />;
-      case 'chat': return <RecruiterChat />;
-      default: return <Dashboard refreshTrigger={refreshTrigger} />;
+    switch (selectedPage) {
+      case "dashboard":
+        return (
+          <Dashboard refreshTrigger={refreshTrigger} />
+        );
+
+      case "resume":
+        return (
+          <ResumeUpload
+            onCandidateAdded={handleCandidateAdded}
+          />
+        );
+
+      case "jd":
+        return (
+          <JDUpload onRanked={handleRanked} />
+        );
+
+      case "ranking":
+        return (
+          <RankingTable
+            rankedCandidates={rankedCandidates}
+            refreshTrigger={refreshTrigger}
+          />
+        );
+
+      case "chat":
+        return <RecruiterChat />;
+
+      default:
+        return (
+          <Dashboard refreshTrigger={refreshTrigger} />
+        );
     }
   };
 
-  const statusColor = backendStatus === 'connected' ? 'success' : backendStatus === 'checking' ? 'warning' : 'error';
-  const statusLabel = backendStatus === 'connected' ? 'Backend Connected' : backendStatus === 'checking' ? 'Checking...' : 'Backend Disconnected';
+  const drawerContent = (
+  <List sx={{ pt: "64px" }}>
+      {navItems.map((item) => (
+        <ListItemButton
+          key={item.id}
+          selected={selectedPage === item.id}
+          onClick={() => handleNavClick(item.id)}
+        >
+          <ListItemIcon>
+            {item.icon}
+          </ListItemIcon>
+
+          <ListItemText primary={item.label} />
+        </ListItemButton>
+      ))}
+    </List>
+  );
 
   return (
-    <Box sx={{ display: 'flex' }}>
-      <CssBaseline />
+    <Box sx={{ display: "flex" }}>
+      <Navbar
+        isMobile={isMobile}
+        mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
+        backendStatus={backendStatus}
+      />
 
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, bgcolor: '#1565C0' }}>
-        <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Typography variant="h6" fontWeight="bold">ATS Resume Matcher</Typography>
-          <Chip label={statusLabel} color={statusColor} size="small" sx={{ color: 'white', fontWeight: 'bold' }} />
-        </Toolbar>
-      </AppBar>
+      <Sidebar
+        isMobile={isMobile}
+        mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
+        drawerContent={drawerContent}
+      />
 
-      <Drawer
-        variant="permanent"
+      <Box
+        component="main"
         sx={{
-          width: DRAWER_WIDTH,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box', bgcolor: '#F5F5F5' },
+          flexGrow: 1,
+          bgcolor: "#f5f5f5",
+          minHeight: "100vh",
+          mt: "64px",
+          overflow: "hidden",
+          pt: {
+            xs: 3,
+            sm: 4,
+            md: 4,
+          },
         }}
       >
-        <Toolbar />
-        <Divider />
-        <List>
-          {navItems.map((item) => (
-            <ListItem key={item.id} disablePadding>
-              <ListItemButton
-                selected={activePage === item.id}
-                onClick={() => setActivePage(item.id)}
-                sx={{
-                  '&.Mui-selected': { bgcolor: '#1565C0', color: 'white' },
-                  '&.Mui-selected:hover': { bgcolor: '#1976D2' },
-                  borderRadius: 1,
-                  mx: 1,
-                  my: 0.5,
-                  gap: 1.5,
-                }}
-              >
-                <Box sx={{ color: activePage === item.id ? 'white' : '#1565C0' }}>
-                  {item.icon}
-                </Box>
-                <ListItemText primary={item.label} primaryTypographyProps={{ fontSize: 14 }} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-      </Drawer>
-
-      <Box component="main" sx={{ flexGrow: 1, p: 4, mt: 8 }}>
         {renderPage()}
       </Box>
     </Box>
